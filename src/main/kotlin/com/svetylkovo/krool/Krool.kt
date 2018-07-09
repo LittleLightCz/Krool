@@ -34,7 +34,7 @@ class Krool<T>(resources: List<T>) {
 
     private suspend fun findFreeResource() = withContext(kroolContext) {
         while (active) {
-            pool.forEach { it ->
+            pool.forEach {
                 synchronized(it.locked) {
                     if (!it.locked) {
                         it.locked = true
