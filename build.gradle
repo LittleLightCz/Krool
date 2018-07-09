@@ -11,6 +11,7 @@ repositories {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib"
+    compile "org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.4"
 }
 
 compileKotlin {
@@ -22,5 +23,11 @@ compileKotlin {
 compileTestKotlin {
     kotlinOptions {
         jvmTarget = "1.6"
+    }
+}
+
+kotlin {
+    experimental {
+        coroutines 'enable'
     }
 }
