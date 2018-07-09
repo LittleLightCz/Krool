@@ -1,5 +1,5 @@
 # Krool
-Kotlin resource pool based on non-blocking coroutines useful for sharing expensive resources in a concurrent environment.
+Kotlin resource pool based on non-blocking coroutines. Useful for sharing expensive resources in a concurrent environment.
 
 ## Usage
 
@@ -19,7 +19,7 @@ object KroolExample {
         // Create expensive resources
         val resources = (1..5).map { ExpensiveResource("ExpensiveResource $it") }
 
-        // Create resource pool
+        // Create a resource pool
         val pool = krool(resources) {
             delayInterval = 50 // Change delayInterval if needed
         }
