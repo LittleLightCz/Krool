@@ -54,8 +54,8 @@ class KroolTest {
 }
 
 class ExpensiveResource(val name: String) {
-    suspend fun performExpensiveOperation(input: Int): String {
+    suspend fun performExpensiveOperation(number: Int): String {
         delay(500)
-        return "$name ($input)"
+        return "$name ($number)"
     }
 }
