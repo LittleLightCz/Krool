@@ -12,6 +12,8 @@ repositories {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib"
     compile "org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.4"
+    testCompile "junit:junit:4.12"
+    testCompile "org.assertj:assertj-core:3.10.0"
 }
 
 compileKotlin {

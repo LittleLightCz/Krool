@@ -1,58 +1,64 @@
 package com.svetylkovo.krool
 
 import kotlinx.coroutines.experimental.delay
+import kotlinx.coroutines.experimental.newFixedThreadPoolContext
 import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.experimental.withContext
 
 
 class Krool<T>(resources: List<T>) {
+
+    private val pool = resources.map { Resource(it) }
+
+    private val kroolContext = newFixedThreadPoolContext(1, "Krool")
+
+    private var active = true
 
     /**
      * Delay interval in ms between resource availability checks
      */
     var delayInterval = 10
 
-    private val pool = resources.map { Resource(it) }
-
-    private var active = true
-
-    suspend fun <R> use(consume: (T) -> R): R? {
-
-        var freeResource : Resource<T>? = null
-
-        while (freeResource == null || active) {
-            pool.forEach { it ->
-                synchronized(it.locked) {
-                    if (!it.locked) {
-                        it.locked = true
-                        freeResource = it
-                        return@forEach
-                    }
-                }
-            }
-
-            if (freeResource == null) {
-                delay(delayInterval)
-            }
-        }
-
-        return freeResource?.let {
-            try {
-                consume(it.resource)
-            } finally {
-                synchronized(it.locked) {
-                    it.locked = false
-                }
+    /**
+     * Use a resource from the pool or suspend until it's available.
+     */
+    suspend fun <R> use(consume: suspend (T) -> R): R? = findFreeResource()?.let {
+        try {
+            consume(it.resource)
+        } finally {
+            synchronized(it.locked) {
+                it.locked = false
             }
         }
     }
 
-    fun <R> useBlocking(consume: (T) -> R) = runBlocking { use(consume) }
+    private suspend fun findFreeResource() = withContext(kroolContext) {
+        while (active) {
+            pool.forEach { it ->
+                synchronized(it.locked) {
+                    if (!it.locked) {
+                        it.locked = true
+                        return@withContext it
+                    }
+                }
+            }
+
+            delay(delayInterval)
+        }
+
+        null
+    }
+
+    fun <R> useBlocking(consume: suspend (T) -> R) = runBlocking { use(consume) }
 
     fun terminate() {
         active = false
     }
 }
 
+/**
+ * Creates a new Krool instance
+ */
 fun <T> krool(
     resources: List<T>,
     settings: Krool<T>.() -> Unit = {}
