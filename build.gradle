@@ -1,13 +1,19 @@
-plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.2.51'
+buildscript {
+    repositories {
+        jcenter()
+    }
 }
 
-group = "com.svetylkovo"
-description = "Kotlin resource pool based on non-blocking coroutines."
-version = "0.0.1"
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.2.51'
+    id "com.jfrog.bintray" version "1.7.3"
+    id "maven-publish"
+}
+
+def kroolVersion = '0.0.1'
 
 repositories {
-    mavenCentral()
+    jcenter()
 }
 
 dependencies {
@@ -32,5 +38,90 @@ compileTestKotlin {
 kotlin {
     experimental {
         coroutines 'enable'
+    }
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+javadoc.failOnError = false
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+}
+
+def pomConfig = {
+    licenses {
+        license {
+            name "GNU GENERAL PUBLIC LICENSE, Version 3"
+            url "https://www.gnu.org/licenses/gpl-3.0.en.html"
+            distribution "repo"
+        }
+    }
+    developers {
+        developer {
+            id "LittleLightCz"
+            name "Antonin Brettsnajdr"
+        }
+    }
+
+    scm {
+        url "https://github.com/LittleLightCz/Krool"
+    }
+}
+
+publishing {
+    publications {
+        mavenPublication(MavenPublication) {
+            from components.java
+            artifact sourcesJar {
+                classifier "sources"
+            }
+            artifact javadocJar {
+                classifier "javadoc"
+            }
+            groupId 'com.svetylkovo'
+            artifactId 'krool'
+            version "$kroolVersion"
+            pom.withXml {
+                def root = asNode()
+                root.appendNode('description', 'Kotlin resource pool based on non-blocking coroutines.')
+                root.appendNode('name', 'Krool')
+                root.appendNode('url', 'https://github.com/LittleLightCz/Krool')
+                root.children().last() + pomConfig
+            }
+        }
+    }
+}
+
+Properties props = new Properties()
+new File('bintray.properties').withInputStream {
+    props.load(it)
+}
+
+bintray {
+    user = props.getProperty('bintray.user')
+    key = props.getProperty('bintray.apikey')
+    publications = ['mavenPublication']
+
+    pkg {
+        repo = 'Krool'
+        name = 'Krool'
+        userOrg = 'reflectoring'
+        licenses = ['GPL-3']
+        vcsUrl = 'https://github.com/LittleLightCz/Krool'
+        version {
+            name = "$kroolVersion"
+            desc = "$kroolVersion"
+            released  = new Date()
+        }
     }
 }
