@@ -6,14 +6,27 @@ buildscript {
 
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.2.51'
-    id "com.jfrog.bintray" version "1.7.3"
-    id "maven-publish"
+    id "com.jfrog.bintray" version "1.8.4"
 }
 
-def kroolVersion = '0.0.1'
+def kroolGroup = "com.svetylkovo"
+def kroolArtifact = "krool"
+def kroolVersion = "0.0.1"
 
-repositories {
-    jcenter()
+def kroolDescription = "Kotlin resource pool based on non-blocking coroutines."
+
+def kroolLicence = "GPL-3.0"
+def kroolVcsUrl = "https://github.com/LittleLightCz/Krool.git"
+
+group = kroolGroup
+version = kroolVersion
+
+allprojects {
+    repositories {
+        jcenter()
+    }
+    apply plugin: 'maven'
+    apply plugin: 'maven-publish'
 }
 
 dependencies {
@@ -53,51 +66,13 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
     from javadoc.destinationDir
 }
 
-artifacts {
-    archives sourcesJar
-    archives javadocJar
-}
-
-def pomConfig = {
-    licenses {
-        license {
-            name "GNU GENERAL PUBLIC LICENSE, Version 3"
-            url "https://www.gnu.org/licenses/gpl-3.0.en.html"
-            distribution "repo"
-        }
-    }
-    developers {
-        developer {
-            id "LittleLightCz"
-            name "Antonin Brettsnajdr"
-        }
-    }
-
-    scm {
-        url "https://github.com/LittleLightCz/Krool"
-    }
-}
-
 publishing {
     publications {
-        mavenPublication(MavenPublication) {
+        MyPublication(MavenPublication) {
             from components.java
-            artifact sourcesJar {
-                classifier "sources"
-            }
-            artifact javadocJar {
-                classifier "javadoc"
-            }
-            groupId 'com.svetylkovo'
-            artifactId 'krool'
-            version "$kroolVersion"
-            pom.withXml {
-                def root = asNode()
-                root.appendNode('description', 'Kotlin resource pool based on non-blocking coroutines.')
-                root.appendNode('name', 'Krool')
-                root.appendNode('url', 'https://github.com/LittleLightCz/Krool')
-                root.children().last() + pomConfig
-            }
+            groupId kroolGroup
+            artifactId kroolArtifact
+            version kroolVersion
         }
     }
 }
@@ -110,18 +85,20 @@ new File('bintray.properties').withInputStream {
 bintray {
     user = props.getProperty('bintray.user')
     key = props.getProperty('bintray.apikey')
-    publications = ['mavenPublication']
+    publications = ['MyPublication']
 
     pkg {
         repo = 'Krool'
-        name = 'Krool'
-        userOrg = 'reflectoring'
-        licenses = ['GPL-3']
-        vcsUrl = 'https://github.com/LittleLightCz/Krool'
+        name = kroolArtifact
+        userOrg = user
+        licenses = [kroolLicence]
+        vcsUrl = kroolVcsUrl
+        labels = ['kotlin', 'pool', 'resource']
+        publicDownloadNumbers = true
         version {
-            name = "$kroolVersion"
-            desc = "$kroolVersion"
-            released  = new Date()
+            name = kroolVersion
+            desc = kroolDescription
+            vcsTag = kroolVersion
         }
     }
 }
