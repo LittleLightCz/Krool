@@ -1,6 +1,18 @@
 # Krool
 Kotlin resource pool based on non-blocking coroutines. Useful for sharing expensive resources in a concurrent environment.
 
+## Gradle
+
+```groovy
+repositories {
+    maven { url "https://dl.bintray.com/littlelightcz/Krool" }
+}
+
+dependencies {
+    compile 'com.svetylkovo:krool:0.0.1'
+}
+```
+
 ## Usage
 
 ```kotlin
