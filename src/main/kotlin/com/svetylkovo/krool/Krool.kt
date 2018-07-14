@@ -5,7 +5,9 @@ import kotlinx.coroutines.experimental.newFixedThreadPoolContext
 import kotlinx.coroutines.experimental.runBlocking
 import kotlinx.coroutines.experimental.withContext
 
-
+/**
+ * Resource pool implementation. Use krool() function to obtain an instance.
+ */
 class Krool<T>(resources: List<T>) {
 
     private val pool = resources.map { Resource(it) }
@@ -49,8 +51,15 @@ class Krool<T>(resources: List<T>) {
         null
     }
 
+    /**
+     * Use a resource from the pool or block until it's available (use this method if you are using
+     * standard threads insted of coroutines).
+     */
     fun <R> useBlocking(consume: suspend (T) -> R) = runBlocking { use(consume) }
 
+    /**
+     * Terminate all tasks that are still waiting for a resource.
+     */
     fun terminate() {
         active = false
     }

@@ -59,8 +59,6 @@ task sourcesJar(type: Jar, dependsOn: classes) {
     from sourceSets.main.allSource
 }
 
-javadoc.failOnError = false
-
 task javadocJar(type: Jar, dependsOn: javadoc) {
     classifier = 'javadoc'
     from javadoc.destinationDir
@@ -73,6 +71,8 @@ publishing {
             groupId kroolGroup
             artifactId kroolArtifact
             version kroolVersion
+            artifact sourcesJar
+            artifact javadocJar
         }
     }
 }
@@ -86,6 +86,7 @@ bintray {
     user = props.getProperty('bintray.user')
     key = props.getProperty('bintray.apikey')
     publications = ['MyPublication']
+    override = true
 
     pkg {
         repo = 'Krool'
