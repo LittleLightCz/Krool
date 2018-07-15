@@ -63,12 +63,52 @@ class Krool<T>(resources: List<T>) {
     fun terminate() {
         active = false
     }
+
+    /**
+     * Closes all resources using the close lambda function. This method makes sure this lambda is
+     * called on each resource even in case of errors.
+     *
+     * @throws Throwable if any of the resources failed to close
+     */
+    fun closeWith(close: (T) -> Unit) {
+
+        terminate()
+
+        var error: Throwable? = null
+
+        pool.forEach {
+            try {
+                close(it.resource)
+            } catch (t: Throwable) {
+                error?.addSuppressed(t) ?: run { error = t }
+            }
+        }
+
+        error?.let { throw it }
+    }
+
+    /**
+     * The same as closeWith, except it suppresses any thrown Exception.
+     */
+    fun closeSilentlyWith(close: (T) -> Unit) = try {
+        closeWith(close)
+    } catch (t: Throwable) {
+        //supress
+    }
 }
 
 /**
- * Creates a new Krool instance
+ * Creates a new Krool instance from a List of resources
  */
 fun <T> krool(
     resources: List<T>,
     settings: Krool<T>.() -> Unit = {}
 ) = Krool(resources).apply(settings)
+
+/**
+ * Creates a new Krool instance from varargs
+ */
+fun <T> kroolOf(
+    vararg resources: T,
+    settings: Krool<T>.() -> Unit = {}
+) = krool(resources.toList(), settings)

@@ -1,10 +1,15 @@
 package com.svetylkovo.krool
 
+import com.svetylkovo.krool.resource.ExpensiveResource
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.spyk
+import io.mockk.verify
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.awaitAll
-import kotlinx.coroutines.experimental.delay
 import kotlinx.coroutines.experimental.runBlocking
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.Test
 
 class KroolTest {
@@ -51,11 +56,53 @@ class KroolTest {
         }
     }
 
-}
+    @Test
+    fun testCloseWithException() {
+        val resources = exceptionThrowingExpensiveResources()
 
-class ExpensiveResource(val name: String) {
-    suspend fun performExpensiveOperation(number: Int): String {
-        delay(500)
-        return "$name ($number)"
+        val pool = krool(resources)
+
+        val throwable = catchThrowable {
+            pool.closeWith { it.close() }
+        }
+
+        assertThat(throwable).hasMessage("Closing of resource 2 failed!")
+    }
+
+    @Test
+    fun testCloseSilentlyWith() {
+        val resources = exceptionThrowingExpensiveResources()
+
+        val pool = krool(resources)
+
+        val throwable = catchThrowable {
+            pool.closeSilentlyWith { it.close() }
+        }
+
+        assertThat(throwable).doesNotThrowAnyException()
+    }
+
+    @Test
+    fun testCloseWithNoException() {
+        val resources = (1..5).map { spyk(ExpensiveResource("ExpensiveResource $it")) }
+
+        val pool = krool(resources)
+
+        pool.closeWith { it.close() }
+
+        resources.forEach {
+            verify(exactly = 1) { it.close() }
+        }
+    }
+
+    private fun exceptionThrowingExpensiveResources(): List<ExpensiveResource> {
+        return (1..5).map { num ->
+            mockk<ExpensiveResource>().also {
+                when (num) {
+                    2 -> every { it.close() } throws RuntimeException("Closing of resource $num failed!")
+                    else -> every { it.close() } returns Unit
+                }
+            }
+        }
     }
 }
