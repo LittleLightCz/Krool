@@ -79,7 +79,7 @@ publishing {
 }
 
 Properties props = new Properties()
-new File('bintray.properties').withInputStream {
+new File("$rootDir/bintray.properties").withInputStream {
     props.load(it)
 }
 

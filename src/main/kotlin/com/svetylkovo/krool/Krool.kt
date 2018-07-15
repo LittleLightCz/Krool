@@ -55,7 +55,9 @@ class Krool<T>(resources: List<T>) {
      * Use a resource from the pool or block until it's available (use this method if you are using
      * standard threads insted of coroutines).
      */
-    fun <R> useBlocking(consume: suspend (T) -> R) = runBlocking { use(consume) }
+    fun <R> useBlocking(consume: (T) -> R) = runBlocking {
+        use { consume(it) }
+    }
 
     /**
      * Terminate all tasks that are still waiting for a resource.
