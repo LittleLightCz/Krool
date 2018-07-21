@@ -5,12 +5,34 @@ Kotlin resource pool based on non-blocking coroutines. Useful for sharing expens
 
 ```groovy
 repositories {
-    maven { url "https://dl.bintray.com/littlelightcz/Krool" }
+    jcenter()
 }
 
 dependencies {
     compile 'com.svetylkovo:krool:0.0.1'
 }
+```
+
+## Maven
+
+Add Jcenter repository:
+```xml
+<repositories>
+    <repository>
+      <id>jcenter</id>
+      <url>https://jcenter.bintray.com/</url>
+    </repository>
+</repositories>
+```
+
+Add dependency:
+```xml
+<dependency>
+  <groupId>com.svetylkovo</groupId>
+  <artifactId>krool</artifactId>
+  <version>0.0.1</version>
+  <type>pom</type>
+</dependency>
 ```
 
 ## Usage
