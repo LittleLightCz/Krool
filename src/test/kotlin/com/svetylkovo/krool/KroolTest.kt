@@ -128,7 +128,7 @@ class KroolTest : CoroutineScope {
 
         assertThatThrownBy {
             runBlocking {
-                krool(5) {
+                krool(5, closeOnError = { it.close() }) {
                     val resource = ExpensiveResource("ExpensiveResource $it")
                     resource.initialize(it % 2 == 0)
                     spyk(resource).also { spiedResource -> resources += spiedResource }
@@ -136,13 +136,16 @@ class KroolTest : CoroutineScope {
             }
         }.hasMessage("Resource ExpensiveResource 2 failed to initialize")
 
-        assertThat(resources).hasSize(3)
+        //TODO One of the resources is null sometimes
+        resources.forEach { println(it) }
 
         resources.forEach {
             verify(exactly = 1) {
                 it.close()
             }
         }
+
+        assertThat(resources).hasSize(3)
     }
 
 }
