@@ -5,14 +5,14 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.Test
 
-class KroolTest {
+class KroolTest : CoroutineScope {
+
+    override val coroutineContext = Dispatchers.Default
 
     @Test
     fun testUse() {
