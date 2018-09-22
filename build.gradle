@@ -1,17 +1,23 @@
 buildscript {
+    ext.kotlin_version = '1.3.0-rc-57'
+
     repositories {
         jcenter()
+        maven { url 'https://dl.bintray.com/kotlin/kotlin-eap' }
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
 plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.2.51'
     id "com.jfrog.bintray" version "1.8.4"
 }
 
 def kroolGroup = "com.svetylkovo"
 def kroolArtifact = "krool"
-def kroolVersion = "0.0.1"
+def kroolVersion = "0.1.0"
 
 def kroolDescription = "Kotlin resource pool based on non-blocking coroutines."
 
@@ -24,14 +30,16 @@ version = kroolVersion
 allprojects {
     repositories {
         jcenter()
+        maven { url 'https://dl.bintray.com/kotlin/kotlin-eap' }
     }
+    apply plugin: 'kotlin'
     apply plugin: 'maven'
     apply plugin: 'maven-publish'
 }
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.4"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:0.26.1-eap13"
     testImplementation "junit:junit:4.12"
     testImplementation "org.assertj:assertj-core:3.10.0"
     testImplementation "io.mockk:mockk:1.8.5"

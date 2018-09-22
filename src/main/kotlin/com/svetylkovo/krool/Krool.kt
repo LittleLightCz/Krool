@@ -1,9 +1,9 @@
 package com.svetylkovo.krool
 
-import kotlinx.coroutines.experimental.delay
-import kotlinx.coroutines.experimental.newFixedThreadPoolContext
-import kotlinx.coroutines.experimental.runBlocking
-import kotlinx.coroutines.experimental.withContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.newFixedThreadPoolContext
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 /**
  * Resource pool implementation. Use krool() function to obtain an instance.

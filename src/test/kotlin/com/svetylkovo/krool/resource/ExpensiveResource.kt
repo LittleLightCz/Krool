@@ -1,6 +1,6 @@
 package com.svetylkovo.krool.resource
 
-import kotlinx.coroutines.experimental.delay
+import kotlinx.coroutines.delay
 
 class ExpensiveResource(val name: String) {
     suspend fun performExpensiveOperation(number: Int): String {
