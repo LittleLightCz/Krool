@@ -96,22 +96,22 @@ class Krool<T>(resources: List<T>) {
 }
 
 /**
- * Creates a new Krool instance using the [resourceBuilder] builder which is executed asynchronously
+ * Creates a new Krool instance using the resource [builder] function which is executed asynchronously
  * on the [context] for faster initialization performance. Please note that initialization of some
- * resources might fail. In this case the [closeOnError] function is executed to silently close those
- * resources that have succeeded to avoid memory/resource leaks and the exception is thrown.
+ * resources might fail. In this case the [closeOnError] function is executed to silently close all
+ * the successful resources to avoid memory/resource leaks and the exception is thrown.
  */
 suspend fun <T> krool(
-    resourcesCount: Int,
+    count: Int,
     closeOnError: (T) -> Unit = {},
     context: CoroutineContext = Dispatchers.Default,
-    resourceBuilder: (Int) -> T
+    builder: suspend (Int) -> T
 ): Krool<T> {
-    assert(resourcesCount > 0)
+    assert(count > 0) { "Count has to be greater that 0" }
 
-    val resources = (1..resourcesCount).map { resourceNum ->
+    val resources = (1..count).map { resourceNum ->
         GlobalScope.async(context) {
-            runCatching { resourceBuilder(resourceNum) }
+            runCatching { builder(resourceNum) }
         }
     }.awaitAll()
 
@@ -125,8 +125,11 @@ suspend fun <T> krool(
             }
         }
 
-        throw failed.first().exceptionOrNull()
-                ?: Exception("Oops, an Exception should have been thrown from the first failed resource in the list, but it was null instead!")
+        failed.asSequence()
+            .mapNotNull { it.exceptionOrNull() }
+            .firstOrNull()
+            ?.let { throw it }
+                ?: throw Exception("Some of the resources failed to initialize but no Exception has been thrown.")
     }
 
     return krool(resources.map { it.getOrThrow() })
