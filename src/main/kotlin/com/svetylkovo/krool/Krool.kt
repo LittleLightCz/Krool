@@ -1,9 +1,7 @@
 package com.svetylkovo.krool
 
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.newFixedThreadPoolContext
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Resource pool implementation. Use krool() function to obtain an instance.
@@ -92,11 +90,46 @@ class Krool<T>(resources: List<T>) {
     /**
      * The same as closeWith, except it suppresses any thrown Exception.
      */
-    fun closeSilentlyWith(close: (T) -> Unit) = try {
-        closeWith(close)
-    } catch (t: Throwable) {
-        //supress
+    fun closeSilentlyWith(close: (T) -> Unit) {
+        runCatching { closeWith(close) }
     }
+}
+
+/**
+ * Creates a new Krool instance using the [resourceBuilder] builder which is executed asynchronously
+ * on the [context] for faster initialization performance. Please note that initialization of some
+ * resources might fail. In this case the [closeOnError] function is executed to silently close those
+ * resources that have succeeded to avoid memory/resource leaks and the exception is thrown.
+ */
+suspend fun <T> krool(
+    resourcesCount: Int,
+    closeOnError: (T) -> Unit = {},
+    context: CoroutineContext = Dispatchers.Default,
+    resourceBuilder: (Int) -> T
+): Krool<T> {
+    assert(resourcesCount > 0)
+
+    val resources = (1..resourcesCount).map { resourceNum ->
+        GlobalScope.async(context) {
+            runCatching { resourceBuilder(resourceNum) }
+        }
+    }.awaitAll()
+
+    val failed = resources.filter { it.isFailure }
+
+    if (failed.isNotEmpty()) {
+        //Close succeeded first
+        resources.filter { it.isSuccess }.forEach {
+            runCatching {
+                it.getOrNull()?.let(closeOnError)
+            }
+        }
+
+        throw failed.first().exceptionOrNull()
+                ?: Exception("Oops, an Exception should have been thrown from the first failed resource in the list, but it was null instead!")
+    }
+
+    return krool(resources.map { it.getOrThrow() })
 }
 
 /**
