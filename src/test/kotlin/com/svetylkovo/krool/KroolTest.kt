@@ -8,6 +8,7 @@ import io.mockk.verify
 import kotlinx.coroutines.*
 import org.assertj.core.api.Assertions.*
 import org.junit.Test
+import java.util.Collections.synchronizedList
 
 class KroolTest : CoroutineScope {
 
@@ -124,20 +125,17 @@ class KroolTest : CoroutineScope {
 
     @Test
     fun testAsyncInitializerFailure() {
-        val resources = mutableListOf<ExpensiveResource>()
+        val resources = synchronizedList(mutableListOf<ExpensiveResource>())
 
         assertThatThrownBy {
             runBlocking {
-                krool(5, closeOnError = { it.close() }) {
-                    val resource = ExpensiveResource("ExpensiveResource $it")
-                    resource.initialize(it % 2 == 0)
-                    spyk(resource).also { spiedResource -> resources += spiedResource }
+                krool(5, closeOnError = { it.close() }) { num ->
+                    val resource = ExpensiveResource("ExpensiveResource $num")
+                    resource.initialize(num % 2 == 0)
+                    spyk(resource).also { resources += it }
                 }
             }
         }.hasMessage("Resource ExpensiveResource 2 failed to initialize")
-
-        //TODO One of the resources is null sometimes
-        resources.forEach { println(it) }
 
         resources.forEach {
             verify(exactly = 1) {

@@ -104,7 +104,7 @@ class Krool<T>(resources: List<T>) {
 suspend fun <T> krool(
     count: Int,
     closeOnError: (T) -> Unit = {},
-    context: CoroutineContext = Dispatchers.Default,
+    context: CoroutineContext = Dispatchers.IO,
     builder: suspend (Int) -> T
 ): Krool<T> {
     assert(count > 0) { "Count has to be greater that 0" }
