@@ -9,6 +9,7 @@ import kotlinx.coroutines.*
 import org.assertj.core.api.Assertions.*
 import org.junit.Test
 import java.util.Collections.synchronizedList
+import java.util.concurrent.atomic.AtomicInteger
 
 class KroolTest : CoroutineScope {
 
@@ -144,6 +145,54 @@ class KroolTest : CoroutineScope {
         }
 
         assertThat(resources).hasSize(3)
+    }
+
+    @Test
+    fun testAsyncInitializerCancellability() {
+        val counter = AtomicInteger(0)
+
+        val job = GlobalScope.launch {
+            krool(5) {
+                (1..3).forEach { _ ->
+                    delay(100)
+                    counter.incrementAndGet()
+                }
+            }
+        }
+
+        Thread.sleep(50)
+
+        job.cancel()
+
+        Thread.sleep(1000)
+
+        assertThat(counter.get()).isEqualTo(0)
+    }
+
+    @Test
+    fun testUseCancellability() {
+        val counter = AtomicInteger(0)
+
+        val krool = runBlocking {
+            krool(5) { it }
+        }
+
+        val results = (1..3).map { _ ->
+            GlobalScope.launch(Dispatchers.IO) {
+                krool.use { numberAsResource ->
+                    delay(100)
+                    counter.addAndGet(numberAsResource)
+                }
+            }
+        }
+
+        Thread.sleep(50)
+
+        results.forEach { it.cancel() }
+
+        Thread.sleep(1000)
+
+        assertThat(counter.get()).isEqualTo(0)
     }
 
 }

@@ -17,7 +17,7 @@ class Krool<T>(resources: List<T>) {
     /**
      * Delay interval in ms between resource availability checks
      */
-    var delayInterval = 10
+    var delayInterval = 10L
 
     /**
      * Use a resource from the pool or suspend until it's available.
@@ -109,11 +109,13 @@ suspend fun <T> krool(
 ): Krool<T> {
     assert(count > 0) { "Count has to be greater that 0" }
 
-    val resources = (1..count).map { resourceNum ->
-        GlobalScope.async(context) {
-            runCatching { builder(resourceNum) }
-        }
-    }.awaitAll()
+    val resources = coroutineScope {
+        (1..count).map { resourceNum ->
+            async(context) {
+                runCatching { builder(resourceNum) }
+            }
+        }.awaitAll()
+    }
 
     val failed = resources.filter { it.isFailure }
 
