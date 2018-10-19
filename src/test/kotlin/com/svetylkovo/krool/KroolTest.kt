@@ -128,23 +128,25 @@ class KroolTest : CoroutineScope {
     fun testAsyncInitializerFailure() {
         val resources = synchronizedList(mutableListOf<ExpensiveResource>())
 
-        assertThatThrownBy {
-            runBlocking {
-                krool(5, closeOnError = { it.close() }) { num ->
-                    val resource = ExpensiveResource("ExpensiveResource $num")
-                    resource.initialize(num % 2 == 0)
-                    spyk(resource).also { resources += it }
-                }
+        runBlocking {
+            krool(5) { num ->
+                val resource = ExpensiveResource("ExpensiveResource $num")
+                resource.initialize(num % 2 == 0)
+                resources += resource
             }
-        }.hasMessage("Resource ExpensiveResource 2 failed to initialize")
-
-        resources.forEach {
-            verify(exactly = 1) {
-                it.close()
-            }
+        }.run {
+            assertThat(initErrors).hasSize(2)
         }
 
         assertThat(resources).hasSize(3)
+
+        assertThatThrownBy {
+            runBlocking {
+                krool(5) { ExpensiveResource("ExpensiveResource $it").initialize(true) }
+            }
+        }
+        .hasMessage("Failed to initialize resources.")
+        .hasStackTraceContaining("Resource ExpensiveResource 1 failed to initialize")
     }
 
     @Test
@@ -153,7 +155,7 @@ class KroolTest : CoroutineScope {
 
         val job = GlobalScope.launch {
             krool(5) {
-                (1..3).forEach { _ ->
+                (1..3).forEach {
                     delay(100)
                     counter.incrementAndGet()
                 }
@@ -177,7 +179,7 @@ class KroolTest : CoroutineScope {
             krool(5) { it }
         }
 
-        val results = (1..3).map { _ ->
+        val results = (1..3).map {
             GlobalScope.launch(Dispatchers.IO) {
                 krool.use { numberAsResource ->
                     delay(100)

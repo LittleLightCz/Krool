@@ -1,6 +1,7 @@
 package com.svetylkovo.krool
 
 import kotlinx.coroutines.*
+import java.util.Collections.synchronizedList
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -14,6 +15,8 @@ class Krool<T>(resources: List<T>) {
 
     private var active = true
 
+    val initErrors = synchronizedList(mutableListOf<Throwable>())
+
     /**
      * Delay interval in ms between resource availability checks
      */
@@ -24,7 +27,7 @@ class Krool<T>(resources: List<T>) {
      */
     suspend fun <R> use(consume: suspend (T) -> R): R? = findFreeResource()?.let {
         try {
-            consume(it.resource)
+            withContext(Dispatchers.IO) { consume(it.resource) }
         } finally {
             synchronized(it.locked) {
                 it.locked = false
@@ -97,44 +100,34 @@ class Krool<T>(resources: List<T>) {
 
 /**
  * Creates a new Krool instance using the resource [builder] function which is executed asynchronously
- * on the [context] for faster initialization performance. Please note that initialization of some
- * resources might fail. In this case the [closeOnError] function is executed to silently close all
- * the successful resources to avoid memory/resource leaks and the exception is thrown.
+ * on the [context] for faster initialization performance. If some of the resources fail to initialize,
+ * the pool will be created only from the successful ones where the exceptions of the failed ones will
+ * be stored in the [Krool.initErrors] property. If all of them fail, an Exception will be thrown.
  */
-suspend fun <T> krool(
+suspend fun <T: Any> krool(
     count: Int,
-    closeOnError: (T) -> Unit = {},
     context: CoroutineContext = Dispatchers.IO,
     builder: suspend (Int) -> T
 ): Krool<T> {
     assert(count > 0) { "Count has to be greater that 0" }
 
-    val resources = coroutineScope {
+    val resources = withContext(context) {
         (1..count).map { resourceNum ->
-            async(context) {
+            async {
                 runCatching { builder(resourceNum) }
             }
         }.awaitAll()
     }
 
-    val failed = resources.filter { it.isFailure }
+    val failures = resources.mapNotNull { it.exceptionOrNull() }
 
-    if (failed.isNotEmpty()) {
-        //Close succeeded first
-        resources.filter { it.isSuccess }.forEach {
-            runCatching {
-                it.getOrNull()?.let(closeOnError)
-            }
-        }
+    if (failures.size == count) throw RuntimeException("Failed to initialize resources.", failures.first())
 
-        failed.asSequence()
-            .mapNotNull { it.exceptionOrNull() }
-            .firstOrNull()
-            ?.let { throw it }
-                ?: throw Exception("Some of the resources failed to initialize but no Exception has been thrown.")
+    val resourcesPool: List<T> = resources.mapNotNull { it.getOrNull() }
+
+    return krool(resourcesPool).apply {
+        if (failures.isNotEmpty()) initErrors += failures
     }
-
-    return krool(resources.map { it.getOrThrow() })
 }
 
 /**
