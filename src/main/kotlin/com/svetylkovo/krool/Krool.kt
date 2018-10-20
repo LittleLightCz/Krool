@@ -25,15 +25,15 @@ class Krool<T>(resources: List<T>) {
     /**
      * Use a resource from the pool or suspend until it's available.
      */
-    suspend fun <R> use(consume: suspend (T) -> R): R? = findFreeResource()?.let {
+    suspend fun <R> use(consume: suspend (T) -> R): R = findFreeResource()?.let {
         try {
-            withContext(Dispatchers.IO) { consume(it.resource) }
+            consume(it.resource)
         } finally {
             synchronized(it.locked) {
                 it.locked = false
             }
         }
-    }
+    } ?: throw RuntimeException("Failed to obtain a resource from the pool")
 
     private suspend fun findFreeResource() = withContext(kroolContext) {
         while (active) {
