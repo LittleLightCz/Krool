@@ -11,11 +11,7 @@ class Krool<T>(resources: List<T>) {
 
     private val pool = resources.map { Resource(it) }
 
-    private val kroolContext = newFixedThreadPoolContext(1, "Krool")
-
-    private var active = true
-
-    val initErrors = synchronizedList(mutableListOf<Throwable>())
+    val initErrors: MutableList<Throwable> = synchronizedList(mutableListOf<Throwable>())
 
     /**
      * Delay interval in ms between resource availability checks
@@ -25,7 +21,7 @@ class Krool<T>(resources: List<T>) {
     /**
      * Use a resource from the pool or suspend until it's available.
      */
-    suspend fun <R> use(consume: suspend (T) -> R): R = findFreeResource()?.let {
+    suspend fun <R> use(consume: suspend (T) -> R): R = findFreeResource().let {
         try {
             consume(it.resource)
         } finally {
@@ -33,10 +29,10 @@ class Krool<T>(resources: List<T>) {
                 it.locked = false
             }
         }
-    } ?: throw RuntimeException("Failed to obtain a resource from the pool")
+    }
 
     private suspend fun findFreeResource() = withContext(kroolContext) {
-        while (active) {
+        while (true) {
             pool.forEach {
                 synchronized(it.locked) {
                     if (!it.locked) {
@@ -49,8 +45,8 @@ class Krool<T>(resources: List<T>) {
             delay(delayInterval)
         }
 
-        null
-    }
+        null // null is however necessary here to workaround the type system
+    } ?: throw RuntimeException("Failed to obtain a resource from the pool")
 
     /**
      * Use a resource from the pool or block until it's available (use this method if you are using
@@ -61,37 +57,24 @@ class Krool<T>(resources: List<T>) {
     }
 
     /**
-     * Terminate all tasks that are still waiting for a resource.
-     */
-    fun terminate() {
-        active = false
-    }
-
-    /**
      * Closes all resources using the close lambda function. This method makes sure this lambda is
      * called on each resource even in case of errors.
      *
      * @throws Throwable if any of the resources failed to close
      */
     fun closeWith(close: (T) -> Unit) {
-
-        terminate()
-
-        var error: Throwable? = null
-
-        pool.forEach {
-            try {
-                close(it.resource)
-            } catch (t: Throwable) {
-                error?.addSuppressed(t) ?: run { error = t }
+        pool.map {
+            runCatching { close(it.resource) }
+        }.mapNotNull { it.exceptionOrNull() }
+            .takeIf { it.isNotEmpty() }
+            ?.reduce { error, other ->
+                error.apply { addSuppressed(other) }
             }
-        }
-
-        error?.let { throw it }
+            ?.let { throw it }
     }
 
     /**
-     * The same as closeWith, except it suppresses any thrown Exception.
+     * The same as [closeWith], except it suppresses any thrown Exception.
      */
     fun closeSilentlyWith(close: (T) -> Unit) {
         runCatching { closeWith(close) }
@@ -104,7 +87,7 @@ class Krool<T>(resources: List<T>) {
  * the pool will be created only from the successful ones where the exceptions of the failed ones will
  * be stored in the [Krool.initErrors] property. If all of them fail, an Exception will be thrown.
  */
-suspend fun <T: Any> krool(
+suspend fun <T : Any> krool(
     count: Int,
     context: CoroutineContext = Dispatchers.IO,
     builder: suspend (Int) -> T
