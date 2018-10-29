@@ -172,7 +172,7 @@ class KroolTest : CoroutineScope {
     }
 
     @Test
-    fun testUseCancellability() {
+    fun testCancellability() {
         val counter = AtomicInteger(0)
 
         val krool = runBlocking {
