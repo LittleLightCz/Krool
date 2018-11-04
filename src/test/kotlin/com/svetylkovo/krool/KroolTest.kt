@@ -196,4 +196,63 @@ class KroolTest : CoroutineScope {
         assertThat(counter.get()).isEqualTo(0)
     }
 
+    @Test
+    fun testMultiplePools() {
+
+        val result = synchronizedList(mutableListOf<String>())
+
+        runBlocking {
+            val numberPool = krool(4) {
+                val numberFunc: (Int) -> List<Int> = { max ->
+                    Thread.sleep(100)
+                    (1..max).toList()
+                }
+                numberFunc
+            }
+
+            val stringPool = krool(4) {
+                val stringFunc: (Int) -> String = {
+                    Thread.sleep(100)
+                    "String $it"
+                }
+                stringFunc
+            }
+
+            withContext(Dispatchers.IO) {
+                (1..5).map { number ->
+                    launch {
+                        numberPool.use { numberFunc ->
+                            val numbers = numberFunc(number)
+                            val strings = numbers.map {
+                                async {
+                                    stringPool.use { stringFunc -> stringFunc(it) }
+                                }
+                            }.awaitAll()
+
+                            result += strings
+                        }
+                    }
+                }.joinAll()
+            }
+        }
+
+        assertThat(result.sorted()).containsExactly(
+            "String 1",
+            "String 1",
+            "String 1",
+            "String 1",
+            "String 1",
+            "String 2",
+            "String 2",
+            "String 2",
+            "String 2",
+            "String 3",
+            "String 3",
+            "String 3",
+            "String 4",
+            "String 4",
+            "String 5"
+        )
+    }
+
 }
