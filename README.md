@@ -67,7 +67,7 @@ with the instances that succeeded, where all thrown Exceptions are being stored 
 dbPool.initErrors
 ```
 
-However if all connections fail, the Exception  will throw instead.
+However if all connections fail, the Exception will be thrown right away.
 
 In our example we would like to use the database connection to fetch a few URLs according 
 to ID, therefore our `Db` class could look like this:
@@ -121,7 +121,7 @@ fun main() = runBlocking {
 Since all `Krool` instances share the same `kroolContext`, don't forget to close it before
 your application exits to avoid thread hanging. Also note that although `Dispatchers.IO` 
 has a lot more threads available, there are max 5 parallel URL selects happening at the 
-time.
+same time.
 
 The output is:
 ```
