@@ -2,7 +2,6 @@ package com.svetylkovo.krool
 
 import kotlinx.coroutines.*
 import java.util.Collections.synchronizedList
-import java.util.concurrent.Executors
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -11,8 +10,6 @@ import kotlin.coroutines.CoroutineContext
 class Krool<T>(resources: List<T>) {
 
     private val pool = resources.map { Resource(it) }
-
-    private val kroolContext = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
 
     val initErrors: MutableList<Throwable> = synchronizedList(mutableListOf<Throwable>())
 
@@ -66,13 +63,11 @@ class Krool<T>(resources: List<T>) {
      * @throws Throwable if any of the resources failed to close
      */
     fun closeWith(close: (T) -> Unit) {
-        val contextClosingResult = runCatching { kroolContext.close() }
-
-        val resourcesClosingResults = pool.map {
+        val closingResults = pool.map {
             runCatching { close(it.resource) }
         }
 
-        (resourcesClosingResults + contextClosingResult)
+        closingResults
             .mapNotNull { it.exceptionOrNull() }
             .takeIf { it.isNotEmpty() }
             ?.reduce { error, other ->

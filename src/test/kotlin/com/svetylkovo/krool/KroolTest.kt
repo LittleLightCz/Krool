@@ -17,7 +17,6 @@ class KroolTest : CoroutineScope {
 
     @Test
     fun testUse() {
-
         val resources = (1..5).map { ExpensiveResource("ExpensiveResource $it") }
 
         val pool = krool(resources) {
